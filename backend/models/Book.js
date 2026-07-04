@@ -10,6 +10,7 @@ const bookSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  tags:            { type: [String], default: [] },
   coverImage:      { type: String,  default: null },
   totalBorrows:    { type: Number,  default: 0 },
   lastBorrowed:    { type: Date,    default: null },

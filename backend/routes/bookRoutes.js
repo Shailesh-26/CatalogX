@@ -23,11 +23,13 @@ router.get("/", verifyToken, async (req, res) => {
         { author:   { $regex: search, $options: "i" } },
         { isbn:     { $regex: search, $options: "i" } },
         { category: { $regex: search, $options: "i" } },
+        { tags:     { $regex: search, $options: "i" } },
       ];
     }
     if (category && category !== "All") query.category = category;
     if (availability === "available")   query.availableCopies = { $gt: 0 };
     if (availability === "unavailable") query.availableCopies = 0;
+    if (req.query.tag) query.tags = req.query.tag;
 
     const total = await Book.countDocuments(query);
     const books = await Book.find(query)
@@ -97,13 +99,17 @@ router.get("/:id/related", verifyToken, async (req, res) => {
 // POST /api/books/add — with optional cover upload
 router.post("/add", verifyAdmin, upload.single("cover"), async (req, res) => {
   try {
-    const { title, author, isbn, availableCopies, category } = req.body;
+    const { title, author, isbn, availableCopies, category, tags } = req.body;
     if (!title || !author || !isbn || !availableCopies || !category)
       return res.status(400).json({ message: "All fields are required." });
 
     const coverImage = req.file?.path || null;
+    let parsedTags = [];
+    if (tags) {
+      try { parsedTags = JSON.parse(tags); } catch { parsedTags = []; }
+    }
     const book = await new Book({
-      title, author, isbn, availableCopies, category, coverImage
+      title, author, isbn, availableCopies, category, coverImage, tags: parsedTags
     }).save();
 
     const admin = await User.findById(req.user.id);
@@ -205,7 +211,7 @@ router.get('/:id/also-borrowed', verifyToken, async (req, res) => {
     const books = await Book.find({ _id: { $in: otherBorrows } })
       .sort({ totalBorrows: -1 })
       .limit(4)
-      .select('title author category coverImage totalBorrows availableCopies');
+      .select('title author category tags coverImage totalBorrows availableCopies');
 
     res.json({ books });
   } catch (err) {

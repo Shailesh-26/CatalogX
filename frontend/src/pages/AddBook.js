@@ -14,6 +14,8 @@ function AddBook() {
   const [book, setBook] = useState({
     title: "", author: "", isbn: "", availableCopies: "", category: ""
   });
+  const [tags,        setTags]        = useState([]);
+  const [tagInput,    setTagInput]    = useState("");
   const [coverFile,   setCoverFile]   = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [loading,     setLoading]     = useState(false);
@@ -45,12 +47,23 @@ function AddBook() {
     setCustomCat("");
   };
 
+  const handleAddTag = () => {
+    const t = tagInput.trim().toLowerCase();
+    if (!t || tags.includes(t)) { setTagInput(""); return; }
+    if (tags.length >= 8) { toast.error("Too many tags", "Max 8 tags per book."); return; }
+    setTags(prev => [...prev, t]);
+    setTagInput("");
+  };
+
+  const handleRemoveTag = (t) => setTags(prev => prev.filter(x => x !== t));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const formData = new FormData();
       Object.entries(book).forEach(([k, v]) => formData.append(k, v));
+      formData.append("tags", JSON.stringify(tags));
       if (coverFile) formData.append("cover", coverFile);
 
       await api.post("/api/books/add", formData, {
@@ -164,6 +177,30 @@ function AddBook() {
               <span className="form-hint">Type a new category and press + or Enter.</span>
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Tags <span className="text-muted" style={{ fontWeight: 400 }}>(optional, max 8)</span></label>
+              <div className="flex gap-8" style={{ flexWrap: "wrap", marginBottom: tags.length ? 10 : 0 }}>
+                {tags.map(t => (
+                  <span key={t} className="badge badge-info" style={{
+                    display: "flex", alignItems: "center", gap: 6, cursor: "default",
+                  }}>
+                    #{t}
+                    <button type="button" onClick={() => handleRemoveTag(t)}
+                      style={{ background: "none", border: "none", cursor: "pointer",
+                        padding: 0, color: "inherit", fontSize: "0.75rem", lineHeight: 1 }}>✕</button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-8">
+                <input className="form-input" placeholder="e.g. bestseller, award-winning…"
+                  value={tagInput} onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(); } }} />
+                <button className="btn btn-secondary btn-sm" type="button"
+                  onClick={handleAddTag}>+</button>
+              </div>
+              <span className="form-hint">Press Enter or + to add a tag. Click ✕ on a tag to remove it.</span>
+            </div>
+
             <div className="flex gap-12 mt-16">
               <button type="button" className="btn btn-secondary"
                 onClick={() => navigate("/books")}>Cancel</button>
@@ -208,6 +245,14 @@ function AddBook() {
                 </span>
               )}
             </div>
+
+            {tags.length > 0 && (
+              <div className="flex gap-6" style={{ flexWrap: "wrap", marginBottom: 16 }}>
+                {tags.map(t => (
+                  <span key={t} className="badge badge-neutral" style={{ fontSize: "0.7rem" }}>#{t}</span>
+                ))}
+              </div>
+            )}
 
             <p className="book-preview-label">Details</p>
             <div className="book-preview-detail">

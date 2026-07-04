@@ -30,9 +30,9 @@ import ProtectedRoute       from "./components/ProtectedRoute";
 const AUTH_ROUTES = ["/login", "/signup", "/verify-email", "/forgot-password", "/public"];
 
 const PRIORITY_STYLES = {
-  high:   { bg: "var(--color-danger-bg)",  border: "var(--color-danger)",  text: "var(--color-danger)",  icon: "🚨" },
-  normal: { bg: "var(--green-50)",         border: "var(--green-200)",     text: "var(--green-800)",     icon: "📢" },
-  low:    { bg: "var(--surface-2)",        border: "var(--border)",        text: "var(--text-secondary)", icon: "ℹ" },
+  high:   { gradient: "linear-gradient(90deg, rgba(220,38,38,0.16), rgba(220,38,38,0.06))", border: "var(--color-danger)",  text: "var(--color-danger)",  iconBg: "var(--color-danger)",  icon: "🚨", pulse: true  },
+  normal: { gradient: "linear-gradient(90deg, rgba(26,107,60,0.16), rgba(245,158,11,0.06))", border: "var(--green-400)",     text: "var(--green-800)",     iconBg: "var(--green-600)",     icon: "📢", pulse: false },
+  low:    { gradient: "linear-gradient(90deg, var(--surface-2), var(--surface))",             border: "var(--border)",        text: "var(--text-secondary)", iconBg: "var(--text-muted)",    icon: "ℹ",  pulse: false },
 };
 
 function AnnouncementBanner() {
@@ -58,27 +58,66 @@ function AnnouncementBanner() {
 
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 12,
-      background: style.bg, borderBottom: `1px solid ${style.border}`,
-      padding: "10px 20px", fontSize: "0.85rem",
+      display: "flex", alignItems: "center", gap: 20,
+      background: style.gradient, borderBottom: `2px solid ${style.border}`,
+      padding: "22px 32px", fontSize: "0.95rem",
+      animation: "slideDown 0.3s ease",
+      position: "relative", overflow: "hidden",
     }}>
-      <span style={{ fontSize: "1rem", flexShrink: 0 }}>{style.icon}</span>
+      <div style={{
+        width: 52, height: 52, borderRadius: "16px", flexShrink: 0,
+        background: style.iconBg,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "1.6rem", boxShadow: "var(--shadow-md)",
+        animation: style.pulse ? "pulseGlow 1.8s ease-in-out infinite" : "none",
+      }}>{style.icon}</div>
+
       <div style={{ flex: 1, minWidth: 0 }}>
-        <strong style={{ color: style.text }}>{announcement.title}</strong>
-        <span style={{ color: "var(--text-secondary)", marginLeft: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <strong style={{ color: style.text, fontSize: "1.15rem", fontFamily: "var(--font-display)" }}>
+            {announcement.title}
+          </strong>
+          {announcement.priority === "high" && (
+            <span style={{
+              fontSize: "0.65rem", fontWeight: 800, letterSpacing: "0.06em",
+              textTransform: "uppercase", color: "#fff", background: "var(--color-danger)",
+              padding: "2px 8px", borderRadius: "20px",
+            }}>Urgent</span>
+          )}
+        </div>
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: 1.5 }}>
           {announcement.message}
-        </span>
+        </p>
       </div>
+
+      {role === "admin" && (
+        <a href="/admin/announcements" style={{
+          flexShrink: 0, fontSize: "0.8rem", fontWeight: 700, color: style.text,
+          textDecoration: "underline", whiteSpace: "nowrap",
+        }}>
+          View all →
+        </a>
+      )}
+
       <button
         onClick={() => {
           sessionStorage.setItem("dismissedAnnouncementId", announcement._id);
           setDismissed(true);
         }}
         style={{
-          background: "none", border: "none", cursor: "pointer",
-          color: style.text, fontSize: "0.9rem", flexShrink: 0, padding: 0,
+          background: "rgba(255,255,255,0.5)", border: "none", cursor: "pointer",
+          color: style.text, fontSize: "1rem", flexShrink: 0,
+          width: 32, height: 32, borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
         }}
       >✕</button>
+
+      <style>{`
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+          50%      { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+        }
+      `}</style>
     </div>
   );
 }

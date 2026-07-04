@@ -77,6 +77,7 @@ function ViewBooks() {
   const [search,        setSearch]        = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category,      setCategory]      = useState("All");
+  const [tagFilter,     setTagFilter]     = useState("");
   const [availability,  setAvailability]  = useState("all");
   const [loading,       setLoading]       = useState(true);
   const [borrowing,     setBorrowing]     = useState(null);
@@ -85,6 +86,9 @@ function ViewBooks() {
   const [deleteTarget,  setDeleteTarget]  = useState(null);
   const [customCat,     setCustomCat]     = useState("");
   const [sessionCats,   setSessionCats]   = useState([]);
+  const [allTags,       setAllTags]       = useState([]);
+  const [editTags,      setEditTags]      = useState([]);
+  const [editTagInput,  setEditTagInput]  = useState("");
 
   const role   = localStorage.getItem("role");
   const userId = localStorage.getItem("userId");
@@ -109,15 +113,27 @@ function ViewBooks() {
       search:       debouncedSearch,
       category:     category === "All" ? "" : category,
       availability: availability === "all" ? "" : availability,
+      tag:          tagFilter,
     });
     api.get(`/api/books?${params}`)
       .then(res => { setBooks(res.data.books); setPagination(res.data.pagination); })
       .catch(() => toast.error("Failed to load", "Could not fetch the catalogue."))
       .finally(() => setLoading(false));
-  }, [page, debouncedSearch, category, availability]); // eslint-disable-line
+  }, [page, debouncedSearch, category, availability, tagFilter]); // eslint-disable-line
 
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
-  useEffect(() => { setPage(1); }, [debouncedSearch, category, availability]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, category, availability, tagFilter]);
+
+  // ── Fetch distinct tags for filter chips ───────────────────
+  useEffect(() => {
+    api.get("/api/books/all")
+      .then(res => {
+        const tagSet = new Set();
+        res.data.forEach(b => (b.tags || []).forEach(t => tagSet.add(t)));
+        setAllTags([...tagSet].sort());
+      })
+      .catch(() => {});
+  }, []);
 
   // ── Borrow ────────────────────────────────────────────────
   const handleBorrow = async (bookId, bookTitle) => {
@@ -136,8 +152,20 @@ function ViewBooks() {
     setEditId(book._id);
     setEditForm({ title: book.title, author: book.author,
       isbn: book.isbn, availableCopies: book.availableCopies, category: book.category });
+    setEditTags(book.tags || []);
+    setEditTagInput("");
     setCustomCat("");
   };
+
+  const handleAddEditTag = () => {
+    const t = editTagInput.trim().toLowerCase();
+    if (!t || editTags.includes(t)) { setEditTagInput(""); return; }
+    if (editTags.length >= 8) { toast.error("Too many tags", "Max 8 tags per book."); return; }
+    setEditTags(prev => [...prev, t]);
+    setEditTagInput("");
+  };
+
+  const handleRemoveEditTag = (t) => setEditTags(prev => prev.filter(x => x !== t));
 
   const handleAddCustomCat = () => {
     const t = customCat.trim();
@@ -149,7 +177,7 @@ function ViewBooks() {
 
   const handleEditSave = async (bookId) => {
     try {
-      await api.put(`/api/books/${bookId}`, editForm);
+      await api.put(`/api/books/${bookId}`, { ...editForm, tags: editTags });
       toast.success("Book updated!", "Changes saved.");
       setEditId(null); fetchBooks();
     } catch { toast.error("Update failed", "Could not save changes."); }
@@ -229,19 +257,36 @@ function ViewBooks() {
             </div>
           </div>
 
-          {(debouncedSearch || category !== "All" || availability !== "all") && (
+          {(debouncedSearch || category !== "All" || availability !== "all" || tagFilter) && (
             <button className="btn btn-ghost btn-sm"
               style={{ marginLeft: "auto", color: "var(--color-danger)", fontSize: "0.78rem" }}
-              onClick={() => { setSearch(""); setDebouncedSearch(""); setCategory("All"); setAvailability("all"); setPage(1); }}>
+              onClick={() => { setSearch(""); setDebouncedSearch(""); setCategory("All"); setAvailability("all"); setTagFilter(""); setPage(1); }}>
               ✕ Clear all filters
             </button>
           )}
         </div>
 
+        {/* Tag filter chips */}
+        {allTags.length > 0 && (
+          <div className="flex gap-8" style={{ marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <span className="text-muted" style={{ fontSize: "0.78rem", fontWeight: 700,
+              textTransform: "uppercase", letterSpacing: "0.04em" }}>Tags</span>
+            {allTags.map(t => (
+              <button key={t}
+                className={`badge ${tagFilter === t ? "badge-info" : "badge-neutral"}`}
+                style={{ border: "none", cursor: "pointer" }}
+                onClick={() => setTagFilter(prev => prev === t ? "" : t)}>
+                #{t}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Active filter chips */}
         <div className="flex gap-8" style={{ marginTop: 10, flexWrap: "wrap" }}>
           {debouncedSearch && <span className="badge badge-info">🔍 "{debouncedSearch}"</span>}
           {category !== "All" && <span className="badge badge-success">📚 {category}</span>}
+          {tagFilter && <span className="badge badge-info">#{tagFilter}</span>}
           {availability !== "all" && (
             <span className="badge badge-warning">
               {availability === "available" ? "✓ Available only" : "✕ Unavailable only"}
@@ -320,6 +365,27 @@ function ViewBooks() {
                           onClick={handleAddCustomCat}>+</button>
                       </div>
                     </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Tags</label>
+                      <div className="flex gap-6" style={{ flexWrap: "wrap", marginBottom: editTags.length ? 8 : 0 }}>
+                        {editTags.map(t => (
+                          <span key={t} className="badge badge-info" style={{
+                            display: "flex", alignItems: "center", gap: 5, fontSize: "0.7rem" }}>
+                            #{t}
+                            <button type="button" onClick={() => handleRemoveEditTag(t)}
+                              style={{ background: "none", border: "none", cursor: "pointer",
+                                padding: 0, color: "inherit", fontSize: "0.7rem" }}>✕</button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-8">
+                        <input className="form-input" placeholder="Add tag…"
+                          value={editTagInput} onChange={e => setEditTagInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddEditTag(); } }} />
+                        <button className="btn btn-secondary btn-sm" type="button"
+                          onClick={handleAddEditTag}>+</button>
+                      </div>
+                    </div>
                     <div className="flex gap-8 mt-8">
                       <button className="btn btn-primary btn-sm"
                         style={{ flex: 1, justifyContent: "center" }}
@@ -354,6 +420,19 @@ function ViewBooks() {
                     </div>
 
                     <p className="text-muted">ISBN: {book.isbn}</p>
+
+                    {book.tags?.length > 0 && (
+                      <div className="flex gap-6" style={{ flexWrap: "wrap", margin: "6px 0" }}>
+                        {book.tags.map(t => (
+                          <button key={t}
+                            className="badge badge-neutral"
+                            style={{ border: "none", cursor: "pointer", fontSize: "0.68rem" }}
+                            onClick={() => setTagFilter(t)}>
+                            #{t}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="book-card-actions">
                       {role === "student" && (
