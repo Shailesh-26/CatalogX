@@ -1,4 +1,4 @@
-// ── Smart Library — Frontend Config ──────────────────────────
+// ──CatalogX - Smart Library — Frontend Config ──────────────────────────
 // Keep in sync with backend/config/constants.js
 
 export const BORROW_DAYS  = 3;

@@ -1,4 +1,4 @@
-// ── Smart Library — Global Constants ─────────────────────────
+// ── CatalogX - Smart Library — Global Constants ─────────────────────────
 // Change values here and they apply everywhere automatically
 
 module.exports = {

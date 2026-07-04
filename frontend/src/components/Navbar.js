@@ -129,7 +129,7 @@ function Navbar() {
         {/* Brand */}
         <Link to="/" className="navbar-brand">
           <div className="navbar-brand-icon">📚</div>
-          Smart Library
+          CatalogX - Smart Library
         </Link>
 
         {/* Global search */}

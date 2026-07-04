@@ -120,7 +120,7 @@ function PublicCatalog() {
           <span style={{
             fontFamily: "var(--font-display)", fontSize: "1.1rem",
             fontWeight: 600, color: "var(--nav-text)",
-          }}>Smart Library</span>
+          }}>CatalogX - Smart Library</span>
           <span style={{
             fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px",
             background: "rgba(245,158,11,0.2)", color: "var(--amber-200)",
@@ -186,7 +186,7 @@ function PublicCatalog() {
             <span style={{ fontSize: "0.7rem", fontWeight: 700,
               textTransform: "uppercase", letterSpacing: "0.08em",
               color: "var(--amber-200)" }}>
-              ✨ Smart Library System
+              ✨  CatalogX - Smart Library System
             </span>
           </div>
 
@@ -765,7 +765,7 @@ function PublicCatalog() {
             <div style={{ width: 22, height: 22, background: "var(--green-600)",
               borderRadius: 4, display: "flex", alignItems: "center",
               justifyContent: "center", fontSize: 11 }}>📚</div>
-            © {new Date().getFullYear()} Smart Library. All rights reserved.
+            © {new Date().getFullYear()} CatalogX. All rights reserved.
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {[

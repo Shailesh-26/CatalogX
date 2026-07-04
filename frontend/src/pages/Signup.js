@@ -46,7 +46,7 @@ function Signup() {
         </div>
         <div className="auth-panel-left-inner">
           <span className="auth-panel-logo">🎓</span>
-          <h1 className="auth-panel-title">Join Smart Library</h1>
+          <h1 className="auth-panel-title">Join CatalogX - Smart Library</h1>
           <p className="auth-panel-subtitle">
             Register to start borrowing from our digital catalogue.
           </p>

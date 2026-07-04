@@ -331,7 +331,7 @@ function StudentDashboard() {
           <div style={{ display: "flex", justifyContent: "space-between",
             alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div>
-              <p className="hero-banner-eyebrow">Smart Library</p>
+              <p className="hero-banner-eyebrow">CatalogX - Smart Library</p>
               <h1 className="hero-title">Your Reading Journey</h1>
               <p className="hero-subtitle">
                 {analytics?.totalBorrowed

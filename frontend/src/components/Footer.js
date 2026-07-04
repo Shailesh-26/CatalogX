@@ -10,7 +10,7 @@ function Footer() {
         {/* Brand */}
         <div className="footer-brand">
           <div className="footer-brand-icon">📚</div>
-          <span>© {year} Smart Library. All rights reserved.</span>
+          <span>© {year} CatalogX . All rights reserved.</span>
         </div>
 
         {/* Links */}

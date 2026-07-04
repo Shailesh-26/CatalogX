@@ -154,7 +154,7 @@ function StudentHome() {
       <div className="page-wrapper">
         {/* Hero */}
         <div className="hero-banner">
-          <p className="hero-banner-eyebrow">Smart Library</p>
+          <p className="hero-banner-eyebrow">CatalogX - Smart Library</p>
           <h1 className="hero-title">Ready to read something new?</h1>
           <p className="hero-subtitle">
             Explore our catalogue, borrow books, and track your reading journey.

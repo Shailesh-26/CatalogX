@@ -139,7 +139,7 @@ function Sidebar() {
               border: "1px solid #f5c6c3", borderRadius: "var(--radius-md)" }}>
               <p style={{ fontSize: "0.8rem", fontWeight: 600,
                 color: "var(--color-danger-text)", marginBottom: 10 }}>
-                Log out of Smart Library?
+                Log out of CatalogX ?
               </p>
               <div className="flex gap-8">
                 <button className="btn btn-danger btn-sm"

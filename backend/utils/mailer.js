@@ -74,13 +74,13 @@ function wrapHTML(content) {
     <div class="wrapper">
       <div class="header">
         <div class="header-logo">📚</div>
-        <div class="header-title">Smart Library</div>
+        <div class="header-title">CatalogX - Smart Library</div>
         <div class="header-sub">Your digital library management system</div>
       </div>
       <div class="body">${content}</div>
       <div class="footer">
         <p class="footer-text">
-          This is an automated message from <span class="footer-brand">Smart Library</span>.<br/>
+          This is an automated message from <span class="footer-brand">CatalogX - Smart Library</span>.<br/>
           Please do not reply to this email.
         </p>
       </div>
@@ -93,7 +93,7 @@ function wrapHTML(content) {
 async function sendBorrowConfirmation({ to, studentName, book, borrowDate, dueDate }) {
   const html = wrapHTML(`
     <p class="greeting">Hello, ${studentName}! 👋</p>
-    <p class="text">You have successfully borrowed a book from <strong>Smart Library</strong>.</p>
+    <p class="text">You have successfully borrowed a book from <strong>CatalogX - Smart Library</strong>.</p>
     <div class="book-card">
       <div class="book-title">📖 ${book.title}</div>
       <div class="book-detail">by ${book.author} · ${book.category}</div>
@@ -124,7 +124,7 @@ async function sendBorrowConfirmation({ to, studentName, book, borrowDate, dueDa
   `);
   await transporter.sendMail({
     from: process.env.EMAIL_FROM, to,
-    subject: `📚 Borrow Confirmed — "${book.title}" | Smart Library`,
+    subject: `📚 Borrow Confirmed — "${book.title}" | CatalogX - Smart Library`,
     html,
   });
 }
@@ -164,7 +164,7 @@ async function sendDueReminder({ to, studentName, books }) {
   `);
   await transporter.sendMail({
     from: process.env.EMAIL_FROM, to,
-    subject: `⏰ Due Tomorrow — Return your book${books.length > 1 ? "s" : ""} | Smart Library`,
+    subject: `⏰ Due Tomorrow — Return your book${books.length > 1 ? "s" : ""} | CatalogX - Smart Library`,
     html,
   });
 }
@@ -206,7 +206,7 @@ async function sendOverdueAlert({ to, studentName, books }) {
   `);
   await transporter.sendMail({
     from: process.env.EMAIL_FROM, to,
-    subject: `🚨 Overdue Alert — ₹${totalFine} fine | Smart Library`,
+    subject: `🚨 Overdue Alert — ₹${totalFine} fine | CatalogX - Smart Library`,
     html,
   });
 }
@@ -216,7 +216,7 @@ async function sendVerificationOTP({ to, name, otp }) {
   const html = wrapHTML(`
     <p class="greeting">Hello, ${name}! 👋</p>
     <p class="text">
-      Welcome to <strong>Smart Library</strong>! Please verify your email address
+      Welcome to <strong>CatalogX - Smart Library</strong>! Please verify your email address
       to activate your account. Use the OTP below:
     </p>
     <div class="otp-box">
@@ -226,14 +226,14 @@ async function sendVerificationOTP({ to, name, otp }) {
     <div class="alert-box">
       <div class="alert-title">⚠ Security Notice</div>
       <div class="alert-text">
-        Never share this OTP with anyone. Smart Library staff will never ask for your OTP.
+        Never share this OTP with anyone. CatalogX - Smart Library staff will never ask for your OTP.
       </div>
     </div>
     <p class="text">If you did not create an account, please ignore this email.</p>
   `);
   await transporter.sendMail({
     from: process.env.EMAIL_FROM, to,
-    subject: `🔐 Verify your email — Smart Library`,
+    subject: `🔐 Verify your email — CatalogX - Smart Library`,
     html,
   });
 }
@@ -243,7 +243,7 @@ async function sendPasswordResetOTP({ to, name, otp }) {
   const html = wrapHTML(`
     <p class="greeting">Hello, ${name}!</p>
     <p class="text">
-      We received a request to reset your Smart Library password.
+      We received a request to reset your CatalogX - Smart Library password.
       Use the OTP below to proceed:
     </p>
     <div class="otp-box">
@@ -260,7 +260,7 @@ async function sendPasswordResetOTP({ to, name, otp }) {
   `);
   await transporter.sendMail({
     from: process.env.EMAIL_FROM, to,
-    subject: `🔑 Password Reset OTP — Smart Library`,
+    subject: `🔑 Password Reset OTP — CatalogX - Smart Library`,
     html,
   });
 }

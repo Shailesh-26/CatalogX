@@ -72,7 +72,7 @@ app.use("/api/achievements",      achievementRoutes);
 app.use("/api/student-analytics", studentAnalyticsRoutes);
 app.use("/api/announcements",     announcementRoutes);
 
-app.get("/", (req, res) => res.json({ status: "Smart Library API running." }));
+app.get("/", (req, res) => res.json({ status: "CatalogX API running." }));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
