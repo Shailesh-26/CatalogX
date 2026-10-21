@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { clearAuth } from "../auth";
 
 function Sidebar() {
   const location  = useLocation();
@@ -23,11 +24,13 @@ function Sidebar() {
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) =>
+    location.pathname === path ||
+    (path === "/books" && location.pathname.startsWith("/books/"));
   const initials = name
     ? name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     : "?";
-  const confirmLogout = () => { localStorage.clear(); navigate("/login"); };
+  const confirmLogout = () => { clearAuth(); navigate("/login"); };
 
   const studentMain = [
     { to: "/student-home", icon: "🏠", label: "Dashboard" },
@@ -40,6 +43,18 @@ function Sidebar() {
     { to: "/profile", icon: "👤", label: "Profile" },
   ];
 
+  const librarianMain = [
+    { to: "/librarian-home", icon: "🏠", label: "Dashboard" },
+    { to: "/books",          icon: "📚", label: "Books" },
+    { to: "/add",            icon: "➕", label: "Add Book" },
+    { to: "/admin",          icon: "📋", label: "Borrow Logs" },
+    { to: "/admin/queues",   icon: "⏳", label: "Waitlists" },
+    { to: "/popular",        icon: "🔥", label: "Popular Books" },
+  ];
+  const librarianAccount = [
+    { to: "/profile", icon: "👤", label: "Profile" },
+  ];
+
   const adminMain = [
     { to: "/admin-home", icon: "🏠", label: "Dashboard" },
     { to: "/books",      icon: "📚", label: "Books" },
@@ -48,7 +63,7 @@ function Sidebar() {
     { to: "/popular",    icon: "🔥", label: "Popular Books" },
   ];
   const adminTools = [
-    { to: "/admin/queues",         icon: "📋", label: "Queue Dashboard" },
+    { to: "/admin/queues",         icon: "⏳", label: "Queue Dashboard" },
     { to: "/admin/announcements",  icon: "📢", label: "Announcements" },
     { to: "/audit",                icon: "🔍", label: "Audit Logs" },
     { to: "/create-staff",         icon: "👑", label: "Create Staff" },
@@ -121,6 +136,14 @@ function Sidebar() {
               {renderLinks(studentMain)}
               {showLabels && <p className="sidebar-section-label" style={{ marginTop: 8 }}>Account</p>}
               {renderLinks(studentAccount)}
+            </>
+          )}
+          {role === "librarian" && (
+            <>
+              {showLabels && <p className="sidebar-section-label">Main</p>}
+              {renderLinks(librarianMain)}
+              {showLabels && <p className="sidebar-section-label" style={{ marginTop: 8 }}>Account</p>}
+              {renderLinks(librarianAccount)}
             </>
           )}
           {role === "admin" && (

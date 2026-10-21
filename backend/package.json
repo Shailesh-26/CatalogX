@@ -1,10 +1,14 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "CatalogX backend API (Express + MongoDB)",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed:admin": "node scripts/createAdmin.js",
+    "models": "node scripts/listModels.js",
+    "test:ai": "node scripts/test.js"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +28,12 @@
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^4.0.0",
     "node-cron": "^4.4.1",
-    "nodemailer": "^9.0.1",
+    "nodemailer": "^9.0.1"
+  },
+  "devDependencies": {
     "nodemon": "^3.1.11"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -10,7 +10,7 @@ function Footer() {
         {/* Brand */}
         <div className="footer-brand">
           <div className="footer-brand-icon">📚</div>
-          <span>© {year} CatalogX . All rights reserved.</span>
+          <span>© {year} CatalogX. All rights reserved.</span>
         </div>
 
         {/* Links */}
@@ -26,6 +26,13 @@ function Footer() {
             <>
               <Link to="/books"   className="footer-link">Books</Link>
               <Link to="/mybooks" className="footer-link">My Books</Link>
+              <Link to="/profile" className="footer-link">Profile</Link>
+            </>
+          )}
+          {role === "librarian" && (
+            <>
+              <Link to="/books"  className="footer-link">Books</Link>
+              <Link to="/admin"  className="footer-link">Logs</Link>
               <Link to="/profile" className="footer-link">Profile</Link>
             </>
           )}

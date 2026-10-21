@@ -1,5 +1,6 @@
 const express = require("express");
 const router  = express.Router();
+const { escapeRegex } = require("../utils/helpers");
 const Book    = require("../models/Book");
 const Borrow  = require("../models/Borrow");
 const User    = require("../models/User");
@@ -9,16 +10,16 @@ const Review  = require("../models/Review");
 router.get("/books", async (req, res) => {
   try {
     const page     = parseInt(req.query.page)  || 1;
-    const limit    = parseInt(req.query.limit) || 9;
+    const limit    = Math.min(parseInt(req.query.limit) || 9, 50);
     const search   = req.query.search   || "";
     const category = req.query.category || "";
 
     const query = {};
     if (search) {
       query.$or = [
-        { title:    { $regex: search, $options: "i" } },
-        { author:   { $regex: search, $options: "i" } },
-        { category: { $regex: search, $options: "i" } },
+        { title:    { $regex: escapeRegex(search), $options: "i" } },
+        { author:   { $regex: escapeRegex(search), $options: "i" } },
+        { category: { $regex: escapeRegex(search), $options: "i" } },
       ];
     }
     if (category && category !== "All") query.category = category;
@@ -35,7 +36,7 @@ router.get("/books", async (req, res) => {
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -48,7 +49,7 @@ router.get("/stats", async (req, res) => {
     const available    = await Book.countDocuments({ availableCopies: { $gt: 0 } });
     res.json({ totalBooks, totalMembers, totalBorrows, available });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -70,7 +71,7 @@ router.get("/featured", async (req, res) => {
     }
     res.json(books);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -84,7 +85,7 @@ router.get("/categories", async (req, res) => {
     const cats = await Book.aggregate(pipeline);
     res.json(cats);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -98,7 +99,7 @@ router.get("/reviews", async (req, res) => {
       .limit(6);
     res.json(reviews);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 

@@ -2,7 +2,7 @@ const express = require("express");
 const router  = express.Router();
 const Review  = require("../models/Review");
 const Borrow  = require("../models/Borrow");
-const { verifyToken } = require("../middleware/authMiddleware");
+const { verifyToken, selfOrStaff } = require("../middleware/authMiddleware");
 
 // GET /api/reviews/:bookId — all reviews for a book
 router.get("/:bookId", verifyToken, async (req, res) => {
@@ -17,12 +17,12 @@ router.get("/:bookId", verifyToken, async (req, res) => {
 
     res.json({ reviews, averageRating: avg, totalReviews: reviews.length });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
 // GET /api/reviews/check/:bookId/:userId — check if user already reviewed
-router.get("/check/:bookId/:userId", verifyToken, async (req, res) => {
+router.get("/check/:bookId/:userId", verifyToken, selfOrStaff(), async (req, res) => {
   try {
     const review = await Review.findOne({
       bookId: req.params.bookId,
@@ -30,18 +30,20 @@ router.get("/check/:bookId/:userId", verifyToken, async (req, res) => {
     });
     res.json({ reviewed: !!review, review: review || null });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
 // POST /api/reviews — submit a review
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { userId, bookId, rating, comment } = req.body;
+    const userId = req.user.id;
+    const { bookId, comment } = req.body;
+    const rating = Number(req.body.rating);
 
-    if (!userId || !bookId || !rating)
-      return res.status(400).json({ message: "userId, bookId and rating are required." });
-    if (rating < 1 || rating > 5)
+    if (!bookId || !rating)
+      return res.status(400).json({ message: "bookId and rating are required." });
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5)
       return res.status(400).json({ message: "Rating must be between 1 and 5." });
 
     // Verify student has actually returned this book
@@ -53,12 +55,12 @@ router.post("/", verifyToken, async (req, res) => {
     const review = await Review.findOneAndUpdate(
       { userId, bookId },
       { rating, comment: comment?.trim() || "" },
-      { upsert: true, returnDocument: "after" }
+      { upsert: true, returnDocument: "after", runValidators: true }
     );
 
     res.json({ message: "Review submitted.", review });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -68,7 +70,7 @@ router.delete("/:bookId", verifyToken, async (req, res) => {
     await Review.findOneAndDelete({ bookId: req.params.bookId, userId: req.user.id });
     res.json({ message: "Review deleted." });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 

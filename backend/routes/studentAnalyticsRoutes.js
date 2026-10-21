@@ -2,9 +2,10 @@ const express = require("express");
 const router  = express.Router();
 const Borrow  = require("../models/Borrow");
 const Review  = require("../models/Review");
-const { verifyToken } = require("../middleware/authMiddleware");
+const { verifyToken, selfOrStaff } = require("../middleware/authMiddleware");
+const { FINE_PER_DAY } = require("../config/constants");
 
-router.get("/:userId", verifyToken, async (req, res) => {
+router.get("/:userId", verifyToken, selfOrStaff(), async (req, res) => {
   try {
     const userId   = req.params.userId;
     const borrows  = await Borrow.find({ userId }).populate("bookId");
@@ -33,7 +34,7 @@ router.get("/:userId", verifyToken, async (req, res) => {
       const ret = new Date(b.returnDate);
       const due = new Date(b.dueDate);
       if (ret <= due) return sum;
-      return sum + Math.ceil((ret - due) / (1000 * 60 * 60 * 24)) * 5;
+      return sum + Math.ceil((ret - due) / (1000 * 60 * 60 * 24)) * FINE_PER_DAY;
     }, 0);
 
     const streak   = calcStreak(borrows);
@@ -57,7 +58,7 @@ router.get("/:userId", verifyToken, async (req, res) => {
       heatmap,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 

@@ -17,17 +17,17 @@ router.get("/", verifyToken, async (req, res) => {
 
     res.json({ notifications, unreadCount });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
 // PATCH /api/notifications/:id/read — mark one as read
 router.patch("/:id/read", verifyToken, async (req, res) => {
   try {
-    await Notification.findByIdAndUpdate(req.params.id, { read: true });
+    await Notification.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { read: true });
     res.json({ message: "Marked as read." });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -40,17 +40,17 @@ router.patch("/read-all", verifyToken, async (req, res) => {
     );
     res.json({ message: "All marked as read." });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
 // DELETE /api/notifications/:id — delete one
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    await Notification.findByIdAndDelete(req.params.id);
+    await Notification.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     res.json({ message: "Notification deleted." });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 

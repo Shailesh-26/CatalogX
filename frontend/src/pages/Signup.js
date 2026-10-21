@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { API_BASE } from "../api";
 import { useNavigate, Link } from "react-router-dom";
 
 function Signup() {
@@ -21,11 +22,17 @@ function Signup() {
     }
     setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/register", form);
+      await axios.post(`${API_BASE}/api/auth/register`, form);
       // Redirect to OTP verification with email in state
       navigate("/verify-email", { state: { email: form.email, name: form.name } });
     } catch (err) {
-      setError(err.response?.data?.message || "Signup failed. Please try again.");
+      if (err.response?.data?.needsVerification) {
+        // Account exists but the email didn't go out — let them retry from the OTP page
+        navigate("/verify-email", { state: { email: form.email, name: form.name, mailFailed: true } });
+        return;
+      }
+      setError(err.response?.data?.message
+        || (!err.response ? "Can't reach the server. Is the backend running on port 5000?" : "Signup failed. Please try again."));
     } finally {
       setLoading(false);
     }

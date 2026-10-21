@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import api from "../api";
+import api, { errMsg } from "../api";
+import { isStaffRole } from "../auth";
 import { useToast } from "../context/ToastContext";
 import Pagination from "../components/Pagination";
 // import { FINE_PER_DAY, BORROW_DAYS, MAX_BORROWS } from "../config";
@@ -18,17 +19,14 @@ const CAT_BADGE = {
 };
 
 // ── Heart / Wishlist Button ───────────────────────────────────
-function HeartButton({ bookId, userId }) {
-  const [liked,    setLiked]    = useState(null); // null = loading
+// `initial` comes from ONE /api/favourites/ids call made by the page —
+// previously every card fired its own request (9+ calls per page).
+function HeartButton({ bookId, initial, onChange }) {
+  const [liked,    setLiked]    = useState(initial);
   const [bouncing, setBouncing] = useState(false);
   const toast = useToast();
 
-  useEffect(() => {
-    if (!userId) return;
-    api.get(`/api/favourites/check/${userId}/${bookId}`)
-      .then(res => setLiked(res.data.isFavourite))
-      .catch(() => setLiked(false));
-  }, [bookId, userId]);
+  useEffect(() => { setLiked(initial); }, [initial]);
 
   const toggle = async (e) => {
     e.preventDefault();
@@ -36,8 +34,9 @@ function HeartButton({ bookId, userId }) {
     setBouncing(true);
     setTimeout(() => setBouncing(false), 300);
     try {
-      const res = await api.post("/api/favourites/toggle", { userId, bookId });
+      const res = await api.post("/api/favourites/toggle", { bookId });
       setLiked(res.data.isFavourite);
+      onChange?.(bookId, res.data.isFavourite);
       toast.success(
         res.data.isFavourite ? "Added to Wishlist ❤️" : "Removed from Wishlist",
         res.data.isFavourite ? "Book saved to your wishlist." : "Book removed from wishlist."
@@ -47,12 +46,12 @@ function HeartButton({ bookId, userId }) {
     }
   };
 
-  if (liked === null) return null; // still loading
-
   return (
     <button
       onClick={toggle}
       title={liked ? "Remove from wishlist" : "Add to wishlist"}
+      aria-label={liked ? "Remove from wishlist" : "Add to wishlist"}
+      aria-pressed={liked}
       style={{
         background: liked ? "rgba(231,76,60,0.1)" : "rgba(255,255,255,0.8)",
         border: `1.5px solid ${liked ? "rgba(231,76,60,0.3)" : "var(--border)"}`,
@@ -90,11 +89,16 @@ function ViewBooks() {
   const [editTags,      setEditTags]      = useState([]);
   const [editTagInput,  setEditTagInput]  = useState("");
 
-  const role   = localStorage.getItem("role");
-  const userId = localStorage.getItem("userId");
-  const toast  = useToast();
+  const [favIds,        setFavIds]        = useState(new Set());
+  const [dbCats,        setDbCats]        = useState([]);
+  const [myBorrowed,    setMyBorrowed]    = useState(new Set());
+
+  const role    = localStorage.getItem("role");
+  const isStaff = isStaffRole(role);
+  const toast   = useToast();
   const debounceRef = useRef(null);
-  const allCategories = [...DEFAULT_CATEGORIES, ...sessionCats];
+  // Include categories that already exist in the DB (e.g. "Biography"), not just the defaults
+  const allCategories = [...new Set([...DEFAULT_CATEGORIES, ...dbCats, ...sessionCats])];
 
   // ── Debounce search ───────────────────────────────────────
   const handleSearchChange = (e) => {
@@ -124,26 +128,40 @@ function ViewBooks() {
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
   useEffect(() => { setPage(1); }, [debouncedSearch, category, availability, tagFilter]);
 
-  // ── Fetch distinct tags for filter chips ───────────────────
+  // ── Tags, categories and wishlist — one small request each ─
   useEffect(() => {
-    api.get("/api/books/all")
-      .then(res => {
-        const tagSet = new Set();
-        res.data.forEach(b => (b.tags || []).forEach(t => tagSet.add(t)));
-        setAllTags([...tagSet].sort());
-      })
+    api.get("/api/books/tags").then(res => setAllTags(res.data)).catch(() => {});
+    api.get("/api/books/categories").then(res => setDbCats(res.data)).catch(() => {});
+    if (role === "student") {
+      api.get("/api/favourites/ids").then(res => setFavIds(new Set(res.data))).catch(() => {});
+    }
+  }, [role]);
+
+  // Which books does this student already have? (so we don't offer "Borrow" again)
+  const loadMyBorrowed = useCallback(() => {
+    if (role !== "student") return;
+    const uid = localStorage.getItem("userId");
+    api.get(`/api/borrow/mybooks/${uid}`)
+      .then(res => setMyBorrowed(new Set(res.data.map(r => r.bookId?._id).filter(Boolean))))
       .catch(() => {});
-  }, []);
+  }, [role]);
+  useEffect(() => { loadMyBorrowed(); }, [loadMyBorrowed]);
+
+  const handleFavChange = (bookId, liked) => setFavIds(prev => {
+    const next = new Set(prev);
+    liked ? next.add(bookId) : next.delete(bookId);
+    return next;
+  });
 
   // ── Borrow ────────────────────────────────────────────────
   const handleBorrow = async (bookId, bookTitle) => {
     setBorrowing(bookId);
     try {
-      await api.post("/api/borrow/borrow", { userId, bookId });
+      await api.post("/api/borrow/borrow", { bookId });
       toast.success("Book borrowed!", `"${bookTitle}" is due in ${BORROW_DAYS} days.`);
-      fetchBooks();
+      fetchBooks(); loadMyBorrowed();
     } catch (err) {
-      toast.error("Cannot borrow", err.response?.data?.message || "Please try again.");
+      toast.error("Cannot borrow", errMsg(err));
     } finally { setBorrowing(null); }
   };
 
@@ -180,7 +198,7 @@ function ViewBooks() {
       await api.put(`/api/books/${bookId}`, { ...editForm, tags: editTags });
       toast.success("Book updated!", "Changes saved.");
       setEditId(null); fetchBooks();
-    } catch { toast.error("Update failed", "Could not save changes."); }
+    } catch (err) { toast.error("Update failed", errMsg(err, "Could not save changes.")); }
   };
 
   // ── Delete ────────────────────────────────────────────────
@@ -189,7 +207,7 @@ function ViewBooks() {
       await api.delete(`/api/books/${deleteTarget._id}`);
       toast.success("Book deleted", `"${deleteTarget.title}" removed.`);
       setDeleteTarget(null); fetchBooks();
-    } catch { toast.error("Delete failed", "Could not delete the book."); }
+    } catch (err) { toast.error("Delete failed", errMsg(err, "Could not delete the book.")); setDeleteTarget(null); }
   };
 
   return (
@@ -201,7 +219,7 @@ function ViewBooks() {
             {pagination.total ?? "..."} book{pagination.total !== 1 ? "s" : ""} in the library
           </p>
         </div>
-        {role === "admin" && (
+        {isStaff && (
           <Link to="/add" className="btn btn-primary btn-sm">➕ Add Book</Link>
         )}
       </div>
@@ -215,12 +233,12 @@ function ViewBooks() {
         <div style={{ position: "relative", marginBottom: 12 }}>
           <span style={{ position: "absolute", left: 12, top: "50%",
             transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 14 }}>🔍</span>
-          <input className="form-input" type="text"
+          <input className="form-input" type="search" aria-label="Search books"
             placeholder="Search by title, author, ISBN or category…"
             value={search} onChange={handleSearchChange}
             style={{ paddingLeft: 38 }} />
           {search && (
-            <button onClick={() => { setSearch(""); setDebouncedSearch(""); }}
+            <button aria-label="Clear search" onClick={() => { setSearch(""); setDebouncedSearch(""); setPage(1); }}
               style={{ position: "absolute", right: 12, top: "50%",
                 transform: "translateY(-50%)", background: "none", border: "none",
                 cursor: "pointer", color: "var(--text-muted)", fontSize: "1rem" }}>✕</button>
@@ -313,7 +331,7 @@ function ViewBooks() {
                 {/* Cover — clickable */}
                 <Link to={`/books/${book._id}`} style={{ textDecoration: "none" }}>
                   {book.coverImage ? (
-                    <img src={book.coverImage} alt={book.title}
+                    <img src={book.coverImage} alt={book.title} loading="lazy"
                       style={{ width: "100%", height: 140, objectFit: "cover",
                         borderRadius: "var(--radius-sm)", cursor: "pointer" }} />
                   ) : (
@@ -404,7 +422,7 @@ function ViewBooks() {
                       </Link>
                       {/* Heart only for students */}
                       {role === "student" && (
-                        <HeartButton bookId={book._id} userId={userId} />
+                        <HeartButton bookId={book._id} initial={favIds.has(book._id)} onChange={handleFavChange} />
                       )}
                     </div>
 
@@ -435,15 +453,26 @@ function ViewBooks() {
                     )}
 
                     <div className="book-card-actions">
-                      {role === "student" && (
+                      {role === "student" && (myBorrowed.has(book._id) ? (
+                        <Link to="/mybooks" className="btn btn-secondary btn-sm"
+                          style={{ flex: 1, justifyContent: "center" }}>
+                          ✓ Borrowed — view in My Books
+                        </Link>
+                      ) : book.availableCopies > 0 ? (
                         <button className="btn btn-primary btn-sm"
                           onClick={() => handleBorrow(book._id, book.title)}
-                          disabled={book.availableCopies <= 0 || borrowing === book._id}
+                          disabled={borrowing === book._id}
                           style={{ flex: 1, justifyContent: "center" }}>
                           {borrowing === book._id ? "Borrowing…" : "Borrow"}
                         </button>
-                      )}
-                      {role === "admin" && (
+                      ) : (
+                        // Out of stock → send them to the detail page where they can join the waitlist
+                        <Link to={`/books/${book._id}`} className="btn btn-secondary btn-sm"
+                          style={{ flex: 1, justifyContent: "center" }}>
+                          ⏳ Join waitlist
+                        </Link>
+                      ))}
+                      {isStaff && (
                         <>
                           <Link to={`/books/${book._id}`}
                             className="btn btn-secondary btn-sm"
@@ -451,9 +480,9 @@ function ViewBooks() {
                             👁 View
                           </Link>
                           <button className="btn btn-secondary btn-sm"
-                            onClick={() => openEdit(book)}>✏</button>
+                            onClick={() => openEdit(book)} title="Edit" aria-label={`Edit ${book.title}`}>✏</button>
                           <button className="btn btn-danger btn-sm"
-                            onClick={() => setDeleteTarget(book)}>🗑</button>
+                            onClick={() => setDeleteTarget(book)} title="Delete" aria-label={`Delete ${book.title}`}>🗑</button>
                         </>
                       )}
                     </div>

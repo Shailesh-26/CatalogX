@@ -17,7 +17,7 @@ router.get("/stats", verifyAdmin, async (req, res) => {
     const totalUsers = await User.countDocuments({ role: "student" });
     res.json({ totalBooks, totalBorrowed, activeBorrowed, overdue, totalUsers });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -55,7 +55,7 @@ router.get("/monthly", verifyAdmin, async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -74,7 +74,7 @@ router.get("/active-users", verifyAdmin, async (req, res) => {
     const result = await Borrow.aggregate(pipeline);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -92,7 +92,7 @@ router.get("/inventory-alerts", verifyAdmin, async (req, res) => {
 
     res.json({ outOfStock, lowStock });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -116,7 +116,7 @@ router.get("/book-stats", verifyAdmin, async (req, res) => {
 
     res.json({ totalBooks, neverBorrowed, topBorrowed, avgBorrows });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 

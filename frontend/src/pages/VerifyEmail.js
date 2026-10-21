@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE } from "../api";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 
 function VerifyEmail() {
@@ -13,7 +14,17 @@ function VerifyEmail() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const email     = location.state?.email || "";
-  const name      = location.state?.name  || "";
+
+  // Signup worked but the OTP email failed to send
+  useEffect(() => {
+    if (location.state?.mailFailed)
+      setError("We couldn't send your code. Check the backend email settings, then press Resend.");
+  }, [location.state]);
+
+  // Opened directly without an email (e.g. page refresh) — send them to signup
+  useEffect(() => {
+    if (!email) navigate("/signup", { replace: true });
+  }, [email, navigate]);
 
   // Countdown for resend
   useEffect(() => {
@@ -55,7 +66,7 @@ function VerifyEmail() {
     if (code.length < 6) { setError("Please enter the complete 6-digit OTP."); return; }
     setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/verify-email", { email, otp: code });
+      await axios.post(`${API_BASE}/api/auth/verify-email`, { email, otp: code });
       navigate("/login", { state: { verified: true } });
     } catch (err) {
       setError(err.response?.data?.message || "Verification failed.");
@@ -69,7 +80,7 @@ function VerifyEmail() {
   const handleResend = async () => {
     setResending(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/resend-otp", { email });
+      await axios.post(`${API_BASE}/api/auth/resend-otp`, { email });
       setResent(true);
       setCountdown(60);
       setOtp(["", "", "", "", "", ""]);

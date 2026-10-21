@@ -1,18 +1,23 @@
 import { useState } from "react";
 import axios from "axios";
+import { API_BASE } from "../api";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useToast } from "../context/ToastContext";
+import { homeFor } from "../auth";
 
 function Login() {
   const [form,    setForm]    = useState({ email: "", password: "" });
   const [error,   setError]   = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPw,  setShowPw]  = useState(false);
   const navigate  = useNavigate();
   const location  = useLocation();
   const toast     = useToast();
 
   const justRegistered = location.state?.registered;
   const justVerified   = location.state?.verified;
+  const sessionExpired = new URLSearchParams(location.search).get("expired") === "1";
+  const redirectTo     = location.state?.from;
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,24 +28,25 @@ function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", form);
+      const res = await axios.post(`${API_BASE}/api/auth/login`, form);
 
       localStorage.setItem("token",  res.data.token);
       localStorage.setItem("role",   res.data.role);
       localStorage.setItem("name",   res.data.name);
 
-      const decoded = JSON.parse(atob(res.data.token.split(".")[1]));
-      localStorage.setItem("userId", decoded.id);
+      localStorage.setItem("userId", res.data.id);
 
       toast.success("Login successful!", `Welcome back, ${res.data.name} 👋`);
-      setTimeout(() => navigate("/"), 600);
+      // Go back to the page they originally wanted, otherwise their dashboard
+      navigate(redirectTo || homeFor(res.data.role), { replace: true });
     } catch (err) {
       // If email not verified, redirect to OTP page
       if (err.response?.data?.needsVerification) {
         navigate("/verify-email", { state: { email: form.email } });
         return;
       }
-      setError(err.response?.data?.message || "Invalid email or password.");
+      setError(err.response?.data?.message
+        || (!err.response ? "Can't reach the server. Is the backend running on port 5000?" : "Invalid email or password."));
     } finally {
       setLoading(false);
     }
@@ -100,18 +106,34 @@ function Login() {
             </div>
           )}
 
-          {error && <div className="alert alert-danger"><span>⚠</span> {error}</div>}
+          {sessionExpired && !error && (
+            <div className="alert alert-warning" style={{ marginBottom: 20 }}>
+              <span>⏰</span> Your session expired. Please log in again.
+            </div>
+          )}
+
+          {error && <div className="alert alert-danger" role="alert"><span>⚠</span> {error}</div>}
 
           <form onSubmit={handleLogin}>
             <div className="form-group">
               <label className="form-label">Email address</label>
-              <input className="form-input" name="email" type="email"
-                placeholder="you@example.com" onChange={handleChange} required />
+              <input className="form-input" name="email" type="email" autoComplete="email" autoFocus
+                placeholder="you@example.com" value={form.email} onChange={handleChange} required />
             </div>
             <div className="form-group">
               <label className="form-label">Password</label>
-              <input className="form-input" name="password" type="password"
-                placeholder="Enter your password" onChange={handleChange} required />
+              <div style={{ position: "relative" }}>
+                <input className="form-input" name="password" type={showPw ? "text" : "password"}
+                  autoComplete="current-password" style={{ paddingRight: 64 }}
+                  placeholder="Enter your password" value={form.password} onChange={handleChange} required />
+                <button type="button" onClick={() => setShowPw(v => !v)}
+                  aria-label={showPw ? "Hide password" : "Show password"}
+                  style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer", fontSize: "0.78rem",
+                    fontWeight: 600, color: "var(--text-muted)", padding: "4px 6px" }}>
+                  {showPw ? "Hide" : "Show"}
+                </button>
+              </div>
               <div style={{ textAlign: "right", marginTop: 6 }}>
                 <Link to="/forgot-password" style={{ fontSize: "0.8rem",
                   color: "var(--green-600)", textDecoration: "none" }}>

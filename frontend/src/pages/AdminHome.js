@@ -489,7 +489,7 @@ export default function AdminHome() {
                 <PieChart>
                   <Pie data={categoryData} cx="50%" cy="50%"
                     outerRadius={80} innerRadius={40}
-                    paddingAngle={3} dataKey="value"
+                    paddingAngle={categoryData.length > 1 ? 3 : 0} dataKey="value"
                     labelLine={false} label={renderPieLabel}
                     onClick={d => setSelectedSlice(selectedSlice === d.name ? null : d.name)}
                     style={{ cursor: "pointer" }} strokeWidth={0}>

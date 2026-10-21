@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ToastProvider }    from "./context/ToastContext";
 import api                  from "./api";
@@ -25,7 +25,16 @@ import PopularBooks         from "./pages/PopularBooks";
 import QueueDashboard       from "./pages/QueueDashboard";
 import WishlistPage         from "./pages/WishlistPage";
 import AnnouncementPage     from "./pages/AnnouncementPage";
+import LibrarianHome        from "./pages/LibrarianHome";
+import NotFound             from "./pages/NotFound";
 import ProtectedRoute       from "./components/ProtectedRoute";
+
+// NOTE: ProtectedRoute takes a `roles` array. The old code passed
+// `roleRequired="admin"`, which ProtectedRoute ignored — so every
+// "admin only" page was actually open to students.
+const STUDENT = ["student"];
+const ADMIN   = ["admin"];
+const STAFF   = ["admin", "librarian"];
 
 const AUTH_ROUTES = ["/login", "/signup", "/verify-email", "/forgot-password", "/public"];
 
@@ -37,6 +46,7 @@ const PRIORITY_STYLES = {
 
 function AnnouncementBanner() {
   const role = localStorage.getItem("role");
+  // (role is re-read on every navigation because AppShell re-renders on route change)
   const [announcement, setAnnouncement] = useState(null);
   const [dismissed,    setDismissed]    = useState(false);
 
@@ -60,7 +70,7 @@ function AnnouncementBanner() {
     <div style={{
       display: "flex", alignItems: "center", gap: 20,
       background: style.gradient, borderBottom: `2px solid ${style.border}`,
-      padding: "22px 32px", fontSize: "0.95rem",
+      padding: "16px clamp(16px, 4vw, 32px)", fontSize: "0.95rem",
       animation: "slideDown 0.3s ease",
       position: "relative", overflow: "hidden",
     }}>
@@ -91,15 +101,16 @@ function AnnouncementBanner() {
       </div>
 
       {role === "admin" && (
-        <a href="/admin/announcements" style={{
+        <Link to="/admin/announcements" style={{
           flexShrink: 0, fontSize: "0.8rem", fontWeight: 700, color: style.text,
           textDecoration: "underline", whiteSpace: "nowrap",
         }}>
           View all →
-        </a>
+        </Link>
       )}
 
       <button
+        aria-label="Dismiss announcement"
         onClick={() => {
           sessionStorage.setItem("dismissedAnnouncementId", announcement._id);
           setDismissed(true);
@@ -135,7 +146,8 @@ function AppShell() {
         {!isAuth && role && <Sidebar />}
         <div className="main-content">
           <div className="main-content-inner">
-            <Routes>
+            <div key={location.pathname} className="page-transition">
+              <Routes>
               <Route path="/"               element={<Dashboard />} />
               <Route path="/login"          element={<Login />} />
               <Route path="/signup"         element={<Signup />} />
@@ -143,49 +155,32 @@ function AppShell() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/public"         element={<PublicCatalog />} />
 
-              <Route path="/student-home" element={
-                <ProtectedRoute roleRequired="student"><StudentDashboard /></ProtectedRoute>
-              } />
-              <Route path="/admin-home" element={
-                <ProtectedRoute roleRequired="admin"><AdminHome /></ProtectedRoute>
-              } />
-              <Route path="/books" element={
-                <ProtectedRoute><ViewBooks /></ProtectedRoute>
-              } />
-              <Route path="/books/:id" element={
-                <ProtectedRoute><BookDetail /></ProtectedRoute>
-              } />
-              <Route path="/add" element={
-                <ProtectedRoute roleRequired="admin"><AddBook /></ProtectedRoute>
-              } />
-              <Route path="/mybooks" element={
-                <ProtectedRoute roleRequired="student"><MyBooks /></ProtectedRoute>
-              } />
-              <Route path="/wishlist" element={
-                <ProtectedRoute roleRequired="student"><WishlistPage /></ProtectedRoute>
-              } />
-              <Route path="/admin" element={
-                <ProtectedRoute roleRequired="admin"><AdminDashboard /></ProtectedRoute>
-              } />
-              <Route path="/admin/queues" element={
-                <ProtectedRoute roleRequired="admin"><QueueDashboard /></ProtectedRoute>
-              } />
-              <Route path="/admin/announcements" element={
-                <ProtectedRoute roleRequired="admin"><AnnouncementPage /></ProtectedRoute>
-              } />
-              <Route path="/popular" element={
-                <ProtectedRoute><PopularBooks /></ProtectedRoute>
-              } />
-              <Route path="/audit" element={
-                <ProtectedRoute roleRequired="admin"><AuditLogs /></ProtectedRoute>
-              } />
-              <Route path="/create-staff" element={
-                <ProtectedRoute roleRequired="admin"><CreateStaff /></ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute><Profile /></ProtectedRoute>
-              } />
+              {/* Student */}
+              <Route path="/student-home" element={<ProtectedRoute roles={STUDENT}><StudentDashboard /></ProtectedRoute>} />
+              <Route path="/mybooks"      element={<ProtectedRoute roles={STUDENT}><MyBooks /></ProtectedRoute>} />
+              <Route path="/wishlist"     element={<ProtectedRoute roles={STUDENT}><WishlistPage /></ProtectedRoute>} />
+
+              {/* Any logged-in user */}
+              <Route path="/books"     element={<ProtectedRoute><ViewBooks /></ProtectedRoute>} />
+              <Route path="/books/:id" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
+              <Route path="/popular"   element={<ProtectedRoute><PopularBooks /></ProtectedRoute>} />
+              <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+              {/* Staff = admin + librarian */}
+              <Route path="/librarian-home" element={<ProtectedRoute roles={["librarian"]}><LibrarianHome /></ProtectedRoute>} />
+              <Route path="/add"            element={<ProtectedRoute roles={STAFF}><AddBook /></ProtectedRoute>} />
+              <Route path="/admin"          element={<ProtectedRoute roles={STAFF}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/queues"   element={<ProtectedRoute roles={STAFF}><QueueDashboard /></ProtectedRoute>} />
+
+              {/* Admin only */}
+              <Route path="/admin-home"          element={<ProtectedRoute roles={ADMIN}><AdminHome /></ProtectedRoute>} />
+              <Route path="/admin/announcements" element={<ProtectedRoute roles={ADMIN}><AnnouncementPage /></ProtectedRoute>} />
+              <Route path="/audit"               element={<ProtectedRoute roles={ADMIN}><AuditLogs /></ProtectedRoute>} />
+              <Route path="/create-staff"        element={<ProtectedRoute roles={ADMIN}><CreateStaff /></ProtectedRoute>} />
+
+              <Route path="*" element={<NotFound />} />
             </Routes>
+            </div>
           </div>
           {!isAuth && <Footer />}
         </div>

@@ -7,7 +7,7 @@ const { verifyAdmin } = require("../middleware/authMiddleware");
 router.get("/", verifyAdmin, async (req, res) => {
   try {
     const page   = parseInt(req.query.page)  || 1;
-    const limit  = parseInt(req.query.limit) || 20;
+    const limit  = Math.min(parseInt(req.query.limit) || 20, 100);
     const action = req.query.action || "";
     const search = req.query.search || "";
 
@@ -15,9 +15,9 @@ router.get("/", verifyAdmin, async (req, res) => {
     if (action && action !== "ALL") query.action = action;
     if (search) {
       query.$or = [
-        { userName: { $regex: search, $options: "i" } },
-        { entity:   { $regex: search, $options: "i" } },
-        { details:  { $regex: search, $options: "i" } },
+        { userName: { $regex: escapeRegex(search), $options: "i" } },
+        { entity:   { $regex: escapeRegex(search), $options: "i" } },
+        { details:  { $regex: escapeRegex(search), $options: "i" } },
       ];
     }
 
@@ -35,7 +35,7 @@ router.get("/", verifyAdmin, async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 

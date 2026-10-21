@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import api from "../api";
+import api, { errMsg } from "../api";
+import { isStaffRole } from "../auth";
 import { useToast } from "../context/ToastContext";
 import { FINE_PER_DAY, BORROW_DAYS } from "../config";
 import PageHeader from "../components/PageHeader";
@@ -278,6 +279,7 @@ function BookDetail() {
   const toast    = useToast();
   const role     = localStorage.getItem("role");
   const userId   = localStorage.getItem("userId");
+  const isStaff  = isStaffRole(role);
 
   const [book,           setBook]           = useState(null);
   const [related,        setRelated]        = useState([]);
@@ -333,7 +335,8 @@ function BookDetail() {
   };
 
   const fetchWaitlist = () => {
-    api.get(`/api/requests/book/${id}`).then(res => setWaitlist(res.data)).catch(() => {});
+    // Full waitlist (with names) is staff-only on the backend
+    if (isStaff) api.get(`/api/requests/book/${id}`).then(res => setWaitlist(res.data)).catch(() => {});
     if (role === "student") {
       api.get(`/api/requests/check/${id}/${userId}`)
         .then(res => { setOnWaitlist(res.data.onWaitlist); setMyPosition(res.data.request?.position || null); })
@@ -356,20 +359,21 @@ function BookDetail() {
   const handleBorrow = async () => {
     setBorrowing(true);
     try {
-      await api.post("/api/borrow/borrow", { userId, bookId: id });
+      await api.post("/api/borrow/borrow", { bookId: id });
       toast.success("Book borrowed!", `"${book.title}" is due in ${BORROW_DAYS} days.`);
       setShowConfirm(false);
       const res = await api.get(`/api/books/${id}`);
       setBook(res.data);
     } catch (err) {
-      toast.error("Cannot borrow", err.response?.data?.message || "Please try again.");
+      toast.error("Cannot borrow", errMsg(err));
+      setShowConfirm(false);
     } finally { setBorrowing(false); }
   };
 
   const handleJoinWaitlist = async () => {
     setJoiningQueue(true);
     try {
-      const res = await api.post("/api/requests/join", { userId, bookId: id });
+      const res = await api.post("/api/requests/join", { bookId: id });
       toast.success("Joined waitlist!", res.data.message);
       setOnWaitlist(true); setMyPosition(res.data.position);
       fetchWaitlist();
@@ -380,7 +384,7 @@ function BookDetail() {
 
   const handleLeaveWaitlist = async () => {
     try {
-      await api.delete(`/api/requests/leave/${id}`, { data: { userId } });
+      await api.delete(`/api/requests/leave/${id}`);
       toast.success("Left waitlist", "Removed from the queue.");
       setOnWaitlist(false); setMyPosition(null); fetchWaitlist();
     } catch { toast.error("Failed", "Could not remove you from the waitlist."); }
@@ -388,10 +392,10 @@ function BookDetail() {
 
   const handleEditSave = async () => {
     try {
-      await api.put(`/api/books/${id}`, editForm);
+      const res = await api.put(`/api/books/${id}`, editForm);
       toast.success("Book updated!", "Changes saved.");
-      setBook(editForm); setEditing(false);
-    } catch { toast.error("Update failed", "Could not save changes."); }
+      setBook(res.data.book || editForm); setEditing(false);
+    } catch (err) { toast.error("Update failed", errMsg(err, "Could not save changes.")); }
   };
 
   const handleDelete = async () => {
@@ -399,14 +403,14 @@ function BookDetail() {
       await api.delete(`/api/books/${id}`);
       toast.success("Book deleted", `"${book.title}" removed.`);
       navigate("/books");
-    } catch { toast.error("Delete failed", "Could not delete the book."); }
+    } catch (err) { toast.error("Delete failed", errMsg(err, "Could not delete the book.")); setShowDelete(false); }
   };
 
   const handleReviewSubmit = async () => {
     if (!reviewForm.rating) { toast.warning("Rating required", "Please select a star rating."); return; }
     setSubmittingReview(true);
     try {
-      await api.post("/api/reviews", { userId, bookId: id, rating: reviewForm.rating, comment: reviewForm.comment });
+      await api.post("/api/reviews", { bookId: id, rating: reviewForm.rating, comment: reviewForm.comment });
       toast.success("Review submitted!", "Thank you for your feedback.");
       setShowReviewForm(false); fetchReviews();
     } catch (err) {
@@ -549,8 +553,8 @@ function BookDetail() {
               </div>
             )}
 
-            {/* Admin actions */}
-            {role === "admin" && (
+            {/* Staff actions (admin + librarian) */}
+            {isStaff && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <AISummaryPanel bookId={id} bookTitle={book.title} />
                 <button className="btn btn-secondary w-full" style={{ justifyContent: "center" }}
@@ -565,19 +569,19 @@ function BookDetail() {
             )}
 
             {/* Admin waitlist */}
-            {role === "admin" && waitlist.length > 0 && (
+            {isStaff && waitlist.length > 0 && (
               <div>
                 <p style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase",
                   letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: 8 }}>
                   Waitlist ({waitlist.length})
                 </p>
-                {waitlist.map(req => (
+                {waitlist.map((req, i) => (
                   <div key={req._id} style={{
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "7px 10px", background: "var(--surface-2)",
                     borderRadius: "var(--radius-sm)", marginBottom: 5, fontSize: "0.82rem",
                   }}>
-                    <span style={{ fontWeight: 700, color: "var(--text-muted)", minWidth: 20 }}>#{req.position}</span>
+                    <span style={{ fontWeight: 700, color: "var(--text-muted)", minWidth: 20 }}>#{i + 1}</span>
                     <span style={{ fontWeight: 600, color: "var(--text-primary)", flex: 1 }}>{req.userId?.name || "Unknown"}</span>
                     <span className={`badge ${req.status === "notified" ? "badge-warning" : "badge-neutral"}`}>{req.status}</span>
                   </div>

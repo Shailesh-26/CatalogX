@@ -3,7 +3,7 @@ const router      = express.Router();
 const Achievement = require("../models/Achievement");
 const Borrow      = require("../models/Borrow");
 const Review      = require("../models/Review");
-const { verifyToken } = require("../middleware/authMiddleware");
+const { verifyToken, selfOrStaff } = require("../middleware/authMiddleware");
 
 const ACHIEVEMENTS = {
   FIRST_BORROW:  { icon: "📚", title: "First Borrow",   desc: "Borrowed your first book",               color: "#2471a3" },
@@ -16,7 +16,7 @@ const ACHIEVEMENTS = {
 };
 
 // GET /api/achievements/:userId — get unlocked + check for new ones
-router.get("/:userId", verifyToken, async (req, res) => {
+router.get("/:userId", verifyToken, selfOrStaff(), async (req, res) => {
   try {
     const userId = req.params.userId;
 
@@ -33,7 +33,7 @@ router.get("/:userId", verifyToken, async (req, res) => {
 
     res.json(all);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 

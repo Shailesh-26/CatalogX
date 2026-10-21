@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { API_BASE } from "../api";
 import { useNavigate, Link } from "react-router-dom";
 
 const STEP = { EMAIL: "email", OTP: "otp", PASSWORD: "password", DONE: "done" };
@@ -42,7 +43,7 @@ function ForgotPassword() {
     setLoading(true);
     setError("");
     try {
-      await axios.post("http://localhost:5000/api/auth/forgot-password", { email });
+      await axios.post(`${API_BASE}/api/auth/forgot-password`, { email });
       setStep(STEP.OTP);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send OTP.");
@@ -68,7 +69,7 @@ function ForgotPassword() {
     if (password.length < 6)  { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/reset-password", {
+      await axios.post(`${API_BASE}/api/auth/reset-password`, {
         email, otp: otp.join(""), newPassword: password,
       });
       setStep(STEP.DONE);

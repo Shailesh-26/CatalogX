@@ -1,12 +1,13 @@
   import { useEffect, useState } from "react";
-  import api from "../api";
+  import api, { errMsg } from "../api";
+  import { useToast } from "../context/ToastContext";
+  import { FINE_PER_DAY } from "../config";
   import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
   } from "recharts";
 
-  const FINE_PER_DAY = 5; // ₹5 fine per day overdue
 
   const PIE_COLORS = {
     Active:   "#3a9e68",
@@ -48,12 +49,11 @@
 
   // ── CSV Export utility ────────────────────────────────────────
   function exportToCSV(records, filter) {
-    const calcFine = (dueDate, returned) => {
-      if (returned) return 0;
-      const today = new Date();
-      const due   = new Date(dueDate);
-      if (today <= due) return 0;
-      return Math.ceil((today - due) / (1000 * 60 * 60 * 24)) * FINE_PER_DAY;
+    const calcFine = (dueDate, returnDate) => {
+      const end = returnDate ? new Date(returnDate) : new Date();
+      const due = new Date(dueDate);
+      if (end <= due) return 0;
+      return Math.ceil((end - due) / (1000 * 60 * 60 * 24)) * FINE_PER_DAY;
     };
 
     const getStatus = (r) => {
@@ -85,14 +85,15 @@
       new Date(r.dueDate).toLocaleDateString("en-IN"),
       r.returnDate ? new Date(r.returnDate).toLocaleDateString("en-IN") : "—",
       getStatus(r),
-      calcFine(r.dueDate, r.returned)
+      calcFine(r.dueDate, r.returned ? r.returnDate : null)
     ]);
 
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    // "\uFEFF" (BOM) makes Excel open the file as UTF-8 so names/₹ don't turn into gibberish
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url  = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
@@ -116,19 +117,35 @@
     const [filter,       setFilter]       = useState("All");
     const [search,       setSearch]       = useState("");
     const [exporting,    setExporting]    = useState(false);
+    const [returningId,  setReturningId]  = useState(null);
+    const toast = useToast();
 
-    useEffect(() => {
+    const loadRecords = () =>
       api.get("/api/borrow/all")
         .then(res => setRecords(res.data))
-        .catch(err => console.error("Failed to load records:", err))
+        .catch(err => toast.error("Failed to load", errMsg(err, "Could not load borrow records.")))
         .finally(() => setLoading(false));
-    }, []);
 
-    const calcFine = (dueDate) => {
-      const today = new Date();
-      const due   = new Date(dueDate);
-      if (today <= due) return 0;
-      return Math.ceil((today - due) / (1000 * 60 * 60 * 24)) * FINE_PER_DAY;
+    useEffect(() => { loadRecords(); }, []); // eslint-disable-line
+
+    // Staff can check a book in at the desk on the student's behalf
+    const handleMarkReturned = async (r) => {
+      setReturningId(r._id);
+      try {
+        const res = await api.post("/api/borrow/return", { borrowId: r._id });
+        toast.success("Checked in", `${r.bookId?.title || "Book"} — ${res.data.message}`);
+        loadRecords();
+      } catch (err) {
+        toast.error("Return failed", errMsg(err));
+      } finally { setReturningId(null); }
+    };
+
+    // Fine for active loans = days late so far; for returned loans = days late at return
+    const calcFine = (dueDate, returnDate) => {
+      const end = returnDate ? new Date(returnDate) : new Date();
+      const due = new Date(dueDate);
+      if (end <= due) return 0;
+      return Math.ceil((end - due) / (1000 * 60 * 60 * 24)) * FINE_PER_DAY;
     };
 
     const getStatus = (r) => {
@@ -263,7 +280,7 @@
                     <Pie
                       data={pieData} cx="50%" cy="45%"
                       innerRadius={50} outerRadius={78}
-                      paddingAngle={3} dataKey="value" strokeWidth={0}
+                      paddingAngle={pieData.length > 1 ? 3 : 0} dataKey="value" strokeWidth={0}
                     >
                       {pieData.map((entry, i) => (
                         <Cell key={i} fill={PIE_COLORS[entry.name] || "#aaa"} />
@@ -372,11 +389,12 @@
                   <th>Due Date</th>
                   <th>Fine</th>
                   <th>Status</th>
+                  <th aria-label="Actions"></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map(r => {
-                  const fine = !r.returned ? calcFine(r.dueDate) : 0;
+                  const fine = calcFine(r.dueDate, r.returned ? r.returnDate : null);
                   return (
                     <tr key={r._id}>
                       <td>
@@ -406,6 +424,15 @@
                         }
                       </td>
                       <td>{statusBadge(r)}</td>
+                      <td>
+                        {!r.returned && (
+                          <button className="btn btn-secondary btn-sm"
+                            disabled={returningId === r._id}
+                            onClick={() => handleMarkReturned(r)}>
+                            {returningId === r._id ? "…" : "↩ Check in"}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -420,12 +447,13 @@
             Showing {filteredRecords.length} of {records.length} records
             {filter !== "All" ? ` · filtered by ${filter}` : ""}
             {" · "}
-            <span
-              style={{ color: "var(--green-600)", cursor: "pointer", fontWeight: 600 }}
+            <button type="button"
+              style={{ color: "var(--green-600)", cursor: "pointer", fontWeight: 600,
+                background: "none", border: "none", padding: 0, font: "inherit" }}
               onClick={handleExport}
             >
               Export this view as CSV
-            </span>
+            </button>
           </p>
         )}
       </div>

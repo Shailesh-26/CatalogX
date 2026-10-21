@@ -1,7 +1,12 @@
-import { Link} from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
 import api from "../api";
 import PageHeader from "../components/PageHeader";
+import { FINE_PER_DAY } from "../config";
+import {
+  LayoutGrid, BarChart3, Trophy, Heart, History as HistoryIcon,
+  BookOpen, Clock, AlertTriangle, Flame, Calendar,
+} from "lucide-react";
 
 const SPINE_EMOJIS = {
   Fiction: "📕", Science: "🔬", Technology: "💻", History: "📜", Other: "📗"
@@ -171,7 +176,6 @@ function AIRecommendations({ userId }) {
   const [loading, setLoading] = useState(true);
   const [basis,   setBasis]   = useState("ai");
   const [basedOn, setBasedOn] = useState([]);
-  const [error,   setError]   = useState("");
 
   useEffect(() => {
     api.post("/api/ai/recommendations", { userId })
@@ -181,11 +185,10 @@ function AIRecommendations({ userId }) {
         setBasedOn(res.data.basedOn || []);
       })
       .catch(() => {
-  // Silently fall back — don't show error to user
-  setRecs([]);
-  setBasis("popular");
-  setLoading(false);
-})
+        // Silently fall back — don't show error to user
+        setRecs([]);
+        setBasis("popular");
+      })
       .finally(() => setLoading(false));
   }, [userId]);
 
@@ -267,6 +270,7 @@ function AIRecommendations({ userId }) {
 function StudentDashboard() {
   const name   = localStorage.getItem("name");
   const userId = localStorage.getItem("userId");
+  const navigate = useNavigate();
 
   const [analytics,     setAnalytics]     = useState(null);
   const [achievements,  setAchievements]  = useState([]);
@@ -274,6 +278,12 @@ function StudentDashboard() {
   const [favourites,    setFavourites]    = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [activeTab,     setActiveTab]     = useState("overview");
+  const tabsRef = useRef(null);
+
+  const goToTab = (tabKey) => {
+    setActiveTab(tabKey);
+    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
 
   const today = new Date().toLocaleDateString("en-IN", {
     weekday: "long", day: "numeric", month: "long", year: "numeric"
@@ -303,15 +313,15 @@ function StudentDashboard() {
     const due = new Date(dueDate);
     const ret = new Date(returnDate);
     if (ret <= due) return 0;
-    return Math.ceil((ret - due) / (1000 * 60 * 60 * 24)) * 5;
+    return Math.ceil((ret - due) / (1000 * 60 * 60 * 24)) * FINE_PER_DAY;
   }
 
   const tabs = [
-    { key: "overview",       label: "Overview" },
-    { key: "analytics",      label: "📊 Analytics" },
-    { key: "achievements",   label: "🏆 Achievements" },
-    { key: "wishlist",       label: "❤️ Wishlist" },
-    { key: "history",        label: "📋 History" },
+    { key: "overview",       label: "Overview",     Icon: LayoutGrid },
+    { key: "analytics",      label: "Analytics",    Icon: BarChart3 },
+    { key: "achievements",   label: "Achievements", Icon: Trophy },
+    { key: "wishlist",       label: "Wishlist",     Icon: Heart },
+    { key: "history",        label: "History",      Icon: HistoryIcon },
   ];
 
   return (
@@ -331,7 +341,7 @@ function StudentDashboard() {
           <div style={{ display: "flex", justifyContent: "space-between",
             alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div>
-              <p className="hero-banner-eyebrow">CatalogX - Smart Library</p>
+              <p className="hero-banner-eyebrow">CatalogX</p>
               <h1 className="hero-title">Your Reading Journey</h1>
               <p className="hero-subtitle">
                 {analytics?.totalBorrowed
@@ -356,7 +366,8 @@ function StudentDashboard() {
                 borderRadius: "var(--radius-lg)", padding: "16px 20px",
                 textAlign: "center", minWidth: 120,
               }}>
-                <p style={{ fontSize: "2rem", marginBottom: 4 }}>🔥</p>
+                <Flame size={32} color="#f59e0b" fill="#f59e0b"
+                  style={{ marginBottom: 4, animation: "flamePulse 1.6s ease-in-out infinite" }} />
                 <p style={{ fontSize: "1.6rem", fontWeight: 700, color: "#fff",
                   lineHeight: 1 }}>
                   {analytics.streak.current}
@@ -374,47 +385,58 @@ function StudentDashboard() {
         {/* Quick stat cards */}
         {!loading && analytics && (
           <div className="stat-grid" style={{ marginBottom: 24 }}>
-            <div className="stat-card stat-card--green">
-              <span className="stat-icon">📚</span>
+            <button className="stat-card stat-card--green" onClick={() => goToTab("history")}
+              style={{ cursor: "pointer", border: "none", textAlign: "left", width: "100%",
+                fontFamily: "var(--font-body)" }}>
+              <BookOpen className="stat-icon" size={22} strokeWidth={2} />
               <span className="stat-label">Total Borrowed</span>
               <span className="stat-value">{analytics.totalBorrowed}</span>
-            </div>
-            <div className="stat-card stat-card--info">
-              <span className="stat-icon">⏳</span>
+            </button>
+            <button className="stat-card stat-card--info" onClick={() => navigate("/mybooks")}
+              style={{ cursor: "pointer", border: "none", textAlign: "left", width: "100%",
+                fontFamily: "var(--font-body)" }}>
+              <Clock className="stat-icon" size={22} strokeWidth={2} />
               <span className="stat-label">Active Loans</span>
               <span className="stat-value">{analytics.currentlyBorrowed}</span>
-            </div>
-            <div className="stat-card stat-card--amber">
-              <span className="stat-icon">🏆</span>
+            </button>
+            <button className="stat-card stat-card--amber" onClick={() => goToTab("achievements")}
+              style={{ cursor: "pointer", border: "none", textAlign: "left", width: "100%",
+                fontFamily: "var(--font-body)" }}>
+              <Trophy className="stat-icon" size={22} strokeWidth={2} />
               <span className="stat-label">Achievements</span>
               <span className="stat-value">{unlockedCount}/{achievements.length}</span>
-            </div>
-            <div className="stat-card stat-card--danger">
-              <span className="stat-icon">⚠</span>
+            </button>
+            <button className="stat-card stat-card--danger" onClick={() => goToTab("history")}
+              style={{ cursor: "pointer", border: "none", textAlign: "left", width: "100%",
+                fontFamily: "var(--font-body)" }}>
+              <AlertTriangle className="stat-icon" size={22} strokeWidth={2} />
               <span className="stat-label">Late Returns</span>
               <span className="stat-value stat-value--danger">{analytics.lateReturns}</span>
-            </div>
+            </button>
           </div>
         )}
 
         {/* Tabs */}
-        <div style={{
+        <div ref={tabsRef} style={{
           display: "flex", gap: 2, marginBottom: 24,
           background: "var(--surface-2)", borderRadius: "var(--radius-lg)",
-          padding: 4, flexWrap: "wrap",
+          padding: 4, flexWrap: "wrap", scrollMarginTop: 80,
         }}>
           {tabs.map(tab => (
             <button key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 flex: 1, minWidth: 80, padding: "8px 12px",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 background: activeTab === tab.key ? "var(--surface)" : "transparent",
                 border: "none", borderRadius: "var(--radius-md)",
                 cursor: "pointer", fontSize: "0.82rem", fontWeight: 600,
                 color: activeTab === tab.key ? "var(--text-primary)" : "var(--text-muted)",
                 boxShadow: activeTab === tab.key ? "var(--shadow-sm)" : "none",
-                transition: "var(--transition)", fontFamily: "var(--font-body)",
+                transition: "all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)", fontFamily: "var(--font-body)",
+                transform: activeTab === tab.key ? "scale(1.02)" : "scale(1)",
               }}>
+              <tab.Icon size={15} strokeWidth={2.2} />
               {tab.label}
             </button>
           ))}
@@ -433,8 +455,8 @@ function StudentDashboard() {
                 {analytics?.heatmap && (
                   <>
                     <hr className="divider" />
-                    <p className="section-title" style={{ marginBottom: 12 }}>
-                      📅 Reading Activity
+                    <p className="section-title" style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                      <Calendar size={16} /> Reading Activity
                     </p>
                     <div className="card" style={{ overflowX: "auto" }}>
                       <ReadingHeatmap heatmap={analytics.heatmap} />
@@ -530,8 +552,9 @@ function StudentDashboard() {
                 {/* Heatmap */}
                 <div className="card" style={{ overflowX: "auto" }}>
                   <p style={{ fontWeight: 700, fontSize: "0.875rem",
-                    color: "var(--text-primary)", marginBottom: 16 }}>
-                    📅 Reading Heatmap — Last 12 Months
+                    color: "var(--text-primary)", marginBottom: 16,
+                    display: "flex", alignItems: "center", gap: 6 }}>
+                    <Calendar size={15} /> Reading Heatmap — Last 12 Months
                   </p>
                   <ReadingHeatmap heatmap={analytics.heatmap} />
                 </div>

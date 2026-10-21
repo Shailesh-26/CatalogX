@@ -53,8 +53,9 @@ function MyBooks() {
   const handleReturn = async (borrowId, bookTitle) => {
     setReturning(borrowId);
     try {
-      await api.post("/api/borrow/return", { borrowId });
-      toast.success("Book returned!", `"${bookTitle}" returned successfully.`);
+      const res = await api.post("/api/borrow/return", { borrowId });
+      if (res.data.fine > 0) toast.warning("Book returned", `"${bookTitle}" — ${res.data.message}`);
+      else toast.success("Book returned!", `"${bookTitle}" returned successfully.`);
       setConfirmId(null);
       fetchMyBooks();
     } catch (err) {
@@ -88,7 +89,7 @@ function MyBooks() {
     }
     setSavingNote(borrowId);
     try {
-      await api.post("/api/notes", { userId, bookId, borrowId, content });
+      await api.post("/api/notes", { borrowId, content });
       toast.success("Note saved!", "Your reading note has been saved.");
       setEditingNote(null);
     } catch {

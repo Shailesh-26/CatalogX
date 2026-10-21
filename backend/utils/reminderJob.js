@@ -2,13 +2,14 @@ const cron   = require("node-cron");
 const Borrow = require("../models/Borrow");
 const { sendDueReminder, sendOverdueAlert } = require("./mailer");
 const { createNotification }               = require("./notify");
+const { FINE_PER_DAY }                     = require("../config/constants");
 
 function startReminderJob() {
   cron.schedule("0 9 * * *", async () => {
     console.log("⏰ Running daily reminder job:", new Date().toLocaleString());
     await processDueReminders();
     await processOverdueAlerts();
-  });
+  }, { timezone: process.env.CRON_TZ || "Asia/Kolkata" });
   console.log("✅ Daily reminder cron job scheduled (runs at 9:00 AM)");
 }
 
@@ -31,7 +32,7 @@ async function processDueReminders() {
     if (!records.length) { console.log("📭 No due-tomorrow reminders."); return; }
 
     // Group by user
-    const byUser = records.reduce((acc, r) => {
+    const byUser = records.filter(r => r.userId && r.bookId).reduce((acc, r) => {
       const uid = r.userId._id.toString();
       if (!acc[uid]) acc[uid] = { user: r.userId, books: [], ids: [] };
       acc[uid].books.push({ ...r.bookId._doc, dueDate: r.dueDate });
@@ -74,7 +75,7 @@ async function processOverdueAlerts() {
 
     if (!records.length) { console.log("📭 No overdue alerts."); return; }
 
-    const byUser = records.reduce((acc, r) => {
+    const byUser = records.filter(r => r.userId && r.bookId).reduce((acc, r) => {
       const uid = r.userId._id.toString();
       if (!acc[uid]) acc[uid] = { user: r.userId, books: [], ids: [] };
       acc[uid].books.push({ ...r.bookId._doc, dueDate: r.dueDate });
@@ -93,7 +94,7 @@ async function processOverdueAlerts() {
       // In-app notification
       for (let i = 0; i < books.length; i++) {
         const daysLate = Math.ceil((new Date() - new Date(books[i].dueDate)) / (1000 * 60 * 60 * 24));
-        const fine     = daysLate * 5;
+        const fine     = daysLate * FINE_PER_DAY;
         await createNotification({
           userId:  user._id,
           type:    "BOOK_OVERDUE",

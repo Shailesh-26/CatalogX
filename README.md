@@ -98,13 +98,20 @@ CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+CLIENT_URL=http://localhost:3000
 ```
 Run the backend:
 ```bash
-node server.js
+npm run dev        # or: npm start
+```
+Create the first admin account:
+```bash
+npm run seed:admin -- "Admin Name" admin@example.com StrongPass123
 ```
 
 ### 3. Frontend setup
+Optionally create `frontend/.env` from `frontend/.env.example` (`REACT_APP_API_URL`, defaults to `http://localhost:5000`).
 ```bash
 cd ../frontend
 npm install
@@ -115,6 +122,11 @@ The app will be available at `http://localhost:3000`, with the API running on `h
 
 ---
 
+> **On Windows / VS Code?** See [HOW-TO-RUN-WINDOWS.md](HOW-TO-RUN-WINDOWS.md), or just run
+> `powershell -ExecutionPolicy Bypass -File .\start-dev.ps1`. Recent fixes are listed in [CHANGES.md](CHANGES.md).
+
+---
+
 ## 🔑 Key Business Rules
 
 | Rule | Value |
@@ -122,7 +134,9 @@ The app will be available at `http://localhost:3000`, with the API running on `h
 | Borrow period | 3 days |
 | Fine | ₹5/day overdue |
 | Max active borrows | 3 books per student |
-| Renewals | 1 per borrow (not allowed if overdue) |
+| Renewals | 1 per borrow (not allowed if overdue or if others are waiting) |
+| Waitlist hold | Next student in queue gets the copy held for 48 hours |
+| Overdue books | Must be returned before borrowing another |
 | OTP expiry | 10 minutes |
 | JWT expiry | 7 days |
 | AI summary cache | 30 days |

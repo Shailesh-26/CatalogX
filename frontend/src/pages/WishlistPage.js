@@ -27,7 +27,7 @@ function WishlistPage() {
       .finally(() => setLoading(false));    
   }, [userId]);
 
-  useEffect(() => { fetchFavourites(); }, [userId]);
+  useEffect(() => { fetchFavourites(); }, [fetchFavourites]);
 
   const handleRemove = async (bookId, title) => {
     try {

@@ -61,16 +61,17 @@ Mood tags should be 2-4 short descriptive words from this list: Thought-provokin
 // POST /api/ai/recommendations
 router.post("/recommendations", verifyToken, async (req, res) => {
   try {
-    const { userId } = req.body;
-    if (!userId) return res.status(400).json({ message: "userId required." });
+    const userId = req.user.id; // always recommend for the logged-in user
 
     const history = await Borrow.find({ userId })
       .populate("bookId", "title author category")
       .sort({ createdAt: -1 })
       .limit(10);
 
-    const borrowedIds = history.map(r => r.bookId?._id?.toString()).filter(Boolean);
-    const allBooks    = await Book.find({}, "title author category availableCopies totalBorrows coverImage");
+    // Exclude everything this student has ever borrowed, not just the last 10
+    const allMine     = await Borrow.find({ userId }).distinct("bookId");
+    const borrowedIds = allMine.map(String);
+    const allBooks    = await Book.find({}, "title author category availableCopies totalBorrows coverImage").limit(300);
 
     // ── DB-driven recommendations (no AI) ────────────────────
     if (history.length === 0) {

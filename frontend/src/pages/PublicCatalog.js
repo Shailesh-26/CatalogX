@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { API_BASE } from "../api";
 import Pagination from "../components/Pagination";
 
-const BASE = "http://localhost:5000/api/public";
+const BASE = `${API_BASE}/api/public`;
 
 const DEFAULT_CATEGORIES = ["Fiction", "Science", "Technology", "History", "Other"];
 
@@ -53,7 +54,6 @@ function PublicCatalog() {
   const [featured,    setFeatured]    = useState([]);
   const [categories,  setCategories]  = useState([]);
   const [reviews,     setReviews]     = useState([]);
-  const [activeSection, setActiveSection] = useState("catalogue");
   const debounceRef = useRef(null);
 
   const catalogueRef = useRef(null);
@@ -101,55 +101,6 @@ function PublicCatalog() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-
-      {/* ── Public Navbar ── */}
-      <nav style={{
-        background: "var(--nav-bg)", padding: "0 32px", height: 58,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-        position: "sticky", top: 0, zIndex: 100,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 34, height: 34,
-            background: "linear-gradient(135deg, var(--amber-400), var(--amber-600))",
-            borderRadius: "var(--radius-sm)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, boxShadow: "0 2px 6px rgba(245,158,11,0.35)",
-          }}>📚</div>
-          <span style={{
-            fontFamily: "var(--font-display)", fontSize: "1.1rem",
-            fontWeight: 600, color: "var(--nav-text)",
-          }}>CatalogX - Smart Library</span>
-          <span style={{
-            fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px",
-            background: "rgba(245,158,11,0.2)", color: "var(--amber-200)",
-            borderRadius: "20px", border: "1px solid rgba(245,158,11,0.3)",
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>Public</span>
-        </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <Link to="/login"  style={{
-            color: "var(--green-200)", textDecoration: "none",
-            fontSize: "0.875rem", padding: "6px 12px",
-            borderRadius: "var(--radius-sm)", transition: "var(--transition)",
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
-          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-          >Log in</Link>
-          <Link to="/signup" style={{
-            background: "var(--amber-400)", color: "#fff",
-            textDecoration: "none", fontSize: "0.875rem",
-            fontWeight: 600, padding: "7px 16px",
-            borderRadius: "var(--radius-md)",
-            boxShadow: "0 2px 6px rgba(245,158,11,0.3)",
-            transition: "var(--transition)",
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--amber-600)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--amber-400)"}
-          >Register Free</Link>
-        </div>
-      </nav>
 
       {/* ── Hero Section ── */}
       <div style={{
@@ -285,7 +236,7 @@ function PublicCatalog() {
 
         {/* ── Featured Books ── */}
         {featured.length > 0 && (
-          <section style={{ marginBottom: 56 }}>
+          <section id="section-featured" style={{ marginBottom: 56, scrollMarginTop: 80 }}>
             <div style={{ display: "flex", alignItems: "baseline",
               justifyContent: "space-between", marginBottom: 20 }}>
               <div>
@@ -395,7 +346,7 @@ function PublicCatalog() {
 
         {/* ── Categories ── */}
         {categories.length > 0 && (
-          <section style={{ marginBottom: 56 }}>
+          <section id="section-browse" style={{ marginBottom: 56, scrollMarginTop: 80 }}>
             <div style={{ marginBottom: 20 }}>
               <span style={{ fontSize: "0.72rem", fontWeight: 700,
                 textTransform: "uppercase", letterSpacing: "0.08em",
@@ -449,7 +400,7 @@ function PublicCatalog() {
         )}
 
         {/* ── Full Catalogue ── */}
-        <section ref={catalogueRef} style={{ marginBottom: 56 }}>
+        <section id="section-catalogue" ref={catalogueRef} style={{ marginBottom: 56, scrollMarginTop: 80 }}>
           <div style={{ marginBottom: 20 }}>
             <span style={{ fontSize: "0.72rem", fontWeight: 700,
               textTransform: "uppercase", letterSpacing: "0.08em",
@@ -626,7 +577,7 @@ function PublicCatalog() {
 
         {/* ── Recent Reviews ── */}
         {reviews.length > 0 && (
-          <section style={{ marginBottom: 56 }}>
+          <section id="section-reviews" style={{ marginBottom: 56, scrollMarginTop: 80 }}>
             <div style={{ marginBottom: 20 }}>
               <span style={{ fontSize: "0.72rem", fontWeight: 700,
                 textTransform: "uppercase", letterSpacing: "0.08em",

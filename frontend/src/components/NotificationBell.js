@@ -9,6 +9,7 @@ const TYPE_ICONS = {
   NEW_BOOK_ADDED:    "📚",
   RENEWAL_CONFIRMED: "🔄",
   RETURN_CONFIRMED:  "↩",
+  ANNOUNCEMENT:      "📢",
 };
 
 const TYPE_COLORS = {
@@ -18,13 +19,13 @@ const TYPE_COLORS = {
   NEW_BOOK_ADDED:    "var(--amber-400)",
   RENEWAL_CONFIRMED: "var(--color-info)",
   RETURN_CONFIRMED:  "var(--color-success)",
+  ANNOUNCEMENT:      "var(--amber-400)",
 };
 
 function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [open,          setOpen]          = useState(false);
-  const [loading,       setLoading]       = useState(false);
   const dropdownRef = useRef(null);
   // const userId      = localStorage.getItem("userId");
   const navigate    = useNavigate();
@@ -42,8 +43,11 @@ function NotificationBell() {
   // Poll every 30 seconds for new notifications
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // Skip polling while the tab is in the background; refresh when it comes back
+    const interval = setInterval(() => { if (!document.hidden) fetchNotifications(); }, 30000);
+    const onVisible = () => { if (!document.hidden) fetchNotifications(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchNotifications]);
 
   // Close dropdown when clicking outside
